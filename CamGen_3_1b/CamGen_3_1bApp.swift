@@ -11,7 +11,7 @@ import SwiftUI
 struct CamGen_3_1bApp: App {
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            CamGen31bView()
         }
     }
 }

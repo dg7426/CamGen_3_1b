@@ -29,6 +29,13 @@ struct CamGen31bView: View {
     @State private var resultMel: String = ""
     @State private var resultExtMel: String = ""
     
+    // State variables used in MelMidi
+    @State private var mDur = Array(repeating: "", count: 25)
+    @State private var melNte = Array(repeating: "", count: 25)
+    @State private var crNt = Array(repeating: Array(repeating: "", count: 3), count: 25)
+    @State private var mNcnt = 0
+    @State private var mBtRem = 0
+    
     // Options for the pickers
     let scaleTypes = ["Major/Minor", "Ukrainian", "Harmonic", "Flamenco", "Persian", "Acoustic", "Gypsy", "Enigmatic", "Neapolitan"]
     let tonics = ["A", "Bb", "B", "C", "C#", "D", "Eb", "E", "F", "F#", "G", "G#"]
@@ -106,7 +113,12 @@ struct CamGen31bView: View {
                 Button("Melody          ")
                 {
                     let results = expandMel(progSelIndex: progSelIndex)
-                    resultExtMel = results
+                    resultExtMel = results.0
+                    mNcnt = results.1
+                    mBtRem = results.2
+                    melNte = results.3
+                    crNt = results.4
+                    mDur = results.5
                 }
                 .font(.system(size: 15)) // Set the font size
                 .padding(10.0)
@@ -114,7 +126,16 @@ struct CamGen31bView: View {
                     RoundedRectangle(cornerRadius: 10) // Roundedcorners
                         .stroke(Color.gray, lineWidth: 3) // Border color and width
                 )
-            }
+                Button("Melody Midi") {
+                    MelodyMidi4(mNcnt: mNcnt, mBtRem: mBtRem, ChrNte: crNt, MelNte: melNte, mDur: mDur)
+                }
+                .font(.system(size: 15)) // Set the font size
+                .padding(10.0)
+                .background(
+                    RoundedRectangle(cornerRadius: 10) // Roundedcorners
+                        .stroke(Color.gray, lineWidth: 3) // Border color and width
+                )
+           }
             
             Divider()
             
@@ -526,9 +547,7 @@ struct CamGen31bView: View {
         print ("starting piSequence loop")
         for n in 0..<10 {
             dumprog = ""
-           // print ("call pisequence", n)
             progseq = PiSequence(progLth: progLth, npf: npf)    //proglth, npf chords
-        //    print ("n = ", n, progseq)
             for i in 0..<8 {
                 if i < 7 {
                     fdum = ","
@@ -538,32 +557,23 @@ struct CamGen31bView: View {
                 }
                 dumprog = dumprog + chrdarray[progseq[i]]  + fdum
                 progarray[n] = dumprog
-         //       print ("for i = ", i)
                 for j in 0..<3 {
-                    print ("for j =", j)
                     p_cdeg[n][i][j] = chrdpcs[progseq[i]][j]
                 }
             }
             mp_array[n] = progarray
-      //      print ("print mp_array")
         }
-     //   print ("End of piSequence loop")
         
         // Break down the output into smaller parts
         let output0 =  "PARAMETERS:    \(nscale[scaleIndex])    \(cnotes[tonicIndex])    \(modename[modeIndex])"
         let o1:[Int] = ([pc[0], pc[1], pc[2], pc[3], pc[4], pc[5], pc[6]])
-        print ("output0 finished")
             
         // Convert the integer array to a string array and join them with commas
         let o1String = o1.map { String($0) }.joined(separator: ", ")
         // Append the label to the output
         let output1 = "PITCH CLASS: \(o1String)"
-        print ("output1 finished")
-
-        //  let output1:[Int] = [pc[0], pc[1], pc[2], pc[3], pc[4], pc[5], pc[6]]
-            
+           
         let output2 = "NOTES: \(letscale[0])  \(letscale[1]) \(letscale[2]) \(letscale[3])  \(letscale[4]) \(letscale[5])  \(letscale[6])\n"
-        print ("output2 finished")
         
        var output3 = "\nPerfect Fifth Chords\n"
         for j in 0..<(npf + 1) {
@@ -573,16 +583,13 @@ struct CamGen31bView: View {
             let jStr = String(j+1)  // Convert j to a string
             output3 += "\(jStr): \(chrdarray[j]) \(chrdescrp[j])\n"
         }
-        print ("output3 finished")
-        
         var output4 = "\nProgressions\n"
         // Loop through number of progressions
         for j in 0..<(10) {
             let jStr = String(j+1)  // Convert j to a string
             output4 += "\(jStr): \(progarray[j])\n"
         }
-
-        return (output0, output1, output2, output3, output4)
+       return (output0, output1, output2, output3, output4)
     }
         
     //MARK
@@ -616,8 +623,6 @@ struct CamGen31bView: View {
             // *************************************************
             let strpos1 = Int.random(in: 1..<(500-progLth))
             let strpos2 = Int.random(in: 1..<(500-progLth))
-//            let endpos1 = strpos1 + progLth - 1
- //           let endpos2 = strpos2 + progLth - 1
             //*********************************
             // Find the starting row and
             // Read two rows of pi digits
@@ -626,35 +631,23 @@ struct CamGen31bView: View {
                 piSeq1[j] = PiDigits[strpos1 + j]
                 piSeq2[j] = PiDigits[strpos2 + j]
             }
-   //         print ("proglth,  piseq1&2", progLth, piSeq1)
             // *************************************************
             // Find the sequence of Pi digits equal to Number of Chords
             //# *************************************************
-   //         print ("starting progseq ", progLth, npf)
-    //        var i = 0
             if npf <= 10 {
                 for k in 0..<progLth {
                     progseq[k] = piSeq1[k]%npf
                     //         i = i + 1
                 }
-   //             print ("npf <= 10", progseq)
-            }
+             }
             else if npf > 10 {
                 for k in 0..<progLth {
                     progseq[k] = (piSeq1[k] + piSeq2[k])%npf
-                    //         i = i + 1
                 }
             }
-  //          print ("progseq:",  progseq)
             return progseq
         }
         
-        
-        // MARK (Dummy function)
-        func mel() -> String {
-            let fflg1 = "99"
-            return fflg1
-         }
         
         //MARK
         // Based on scale, tonic, mode, the 7 scale notes, the perfect fifth chords, and 1 of the 10 random chord progressions, 8 chords in length. The progression length(8) and the number of progressions(10) are currently hard coded. Given a progression, the code finds a simple melody and transition notes along with note durations.
@@ -708,8 +701,6 @@ struct CamGen31bView: View {
                     Dtot[i][j] = minV
                 }
             }
-            print ("Starting Results")
-            print ("Path = ", Path)
             // Write results
             var MinP = 9999.0
             var jmin = 0
@@ -720,17 +711,10 @@ struct CamGen31bView: View {
                 }
             }
             P[NChord - 1] = jmin
-            print ("P[NChord-1] = , jmin =",P[NChord-1], jmin)
-            print ("Starting k loop", NChord)
-            print ("P", P)
             for k in stride(from: NChord - 2, through: 0, by: -1) {
-                print("k loop: ", k)
                 P[k] = Path[k + 1][P[k + 1]]
-                print ("k loop :", k, P[k+1], Path[k+1]
-                )
             }
-             var SimMel = [String](repeating: "", count: 8)
-            print ("Starting j loop")
+            var SimMel = [String](repeating: "", count: 8)
             for j in 0..<NChord {
                 if j == 0 {
                     SimMel[j] = DNotes[FCNte[FstNte]]
@@ -817,15 +801,11 @@ struct CamGen31bView: View {
             var Candi = [Int](repeating: 999, count: 5)
             var ChdNte = [Int](repeating: -1, count: 3)
             var Dist = [Double](repeating: 0.0, count: 15)
-       //     var DumNte = [Int](repeating: 0, count: 2)
             var KeyNts = [String](repeating: "", count: 12)
             var MaxP = [Int](repeating: 0, count: 15)
             var MaxPth = [Double](repeating: 9999.0, count: 15)
-       //     var NDur = [String](repeating: "", count: 4)
-       //     var P = [Int](repeating: 0, count: 100)
             var PthCnt = [Int](repeating: -1, count: 15)
             var Rank = [Int](repeating: 0, count: 15)
-       //     var RLag = [String](repeating: "", count: 12)
             var TranNt = [[Int]](repeating: [Int](repeating: 999, count: 3), count: 20)
             for i in 0..<Nchord {
                 MaxP[i] = 0
@@ -918,9 +898,9 @@ struct CamGen31bView: View {
             return TranNt
         }
         
-        //Mark
+        //MARK
         // Function to expand simple melody
-        func expandMel(progSelIndex: Int) -> String {
+        func expandMel(progSelIndex: Int) -> (String, Int, Int, [String], [[String]], [String]) {
             print ("Starting expand mel func", progSelIndex)
             var chrDeg = Array(repeating: Array(repeating: -1, count: 3), count: 8)
             let pID = progSelIndex
@@ -929,9 +909,6 @@ struct CamGen31bView: View {
                     chrDeg[i][j] = p_cdeg[pID][i][j]
                 }
             }
-            print ("cdeg=p_cdeg", p_cdeg)
-      //      var sprog = [""]
-      //      sprog = mp_array[1]
             var chrNte = Array(repeating: Array(repeating: "", count: 3), count: 25)
             var crNt = Array(repeating: Array(repeating: "", count: 3), count: 25)
             let dNotes = ["A", "Bb", "B", "C", "C#", "D", "Eb", "E", "F", "F#", "G", "G#"]
@@ -952,7 +929,7 @@ struct CamGen31bView: View {
                     chrNte[i][j] = dNotes[chrDeg[i][j]]
                 }
             }
-            let octavB = octDum - 2
+        //    let octavB = octDum - 2
             // Randomize the melody's first chord note
             let rn = Double.random(in: 0..<1)
             let fstNte: Int
@@ -963,7 +940,7 @@ struct CamGen31bView: View {
             } else {
                 fstNte = 2
             }
-            let method = 1 // Simple melody-1: SP; 2: DP
+      //      let method = 1 // Simple melody-1: SP; 2: DP
             // Identify the permissible note candidates in array sklNte(i)
             for i in 0..<7 {
                 sklNte[skPC[i]] = 1
@@ -973,17 +950,14 @@ struct CamGen31bView: View {
                     sklNte[chrDeg[k][j]] = 1
                 }
             }
-     //       print ("Begin simple mel")
-     //       print ("dNotes", dNotes)
+            print ("Begin simple mel")
             // Find and write the simple melody
             let simMel = sPath(ChrDeg: chrDeg, FstNte: fstNte, NChord: nChord, DNotes: dNotes)
-     //       print ("Finish sPath sub")
             // Expand the simple melody to include transition notes
             let tranNt = MelDP(Nchord: nChord, ChrDeg: chrDeg, DNotes: dNotes, NPClss: npClss, SimMel: simMel)
-      //      print ("Finish MelDP sub")
+            print ("Finish MelDP sub")
             // Write to file
             // NDur Data (WN:840; HN:820; QN+8:814; QN:810; 8N:4
-            print ("Begin nDur sequence")
             nDur[0] = "W"   // 840
             nDur[1] = "H"   // 820
             nDur[2] = "Q+E" // 814
@@ -991,16 +965,13 @@ struct CamGen31bView: View {
             nDur[4] = "E"   // 4
             var cnt = -1
             for k in 0..<nChord {
-                print ("starting k1 loop", k)
                 cnt += 1
                 melNte[cnt] = simMel[k] + String(octDum)
-                print ("cnt, simMel, melNte: ", cnt, simMel, melNte)
-                crNt[cnt][0] = chrNte[k][0] + String(octDum)
-                crNt[cnt][1] = chrNte[k][1] + String(octDum)
-                crNt[cnt][2] = chrNte[k][2] + String(octDum)
+                crNt[cnt][0] = chrNte[k][0] + String(octDum-1)
+                crNt[cnt][1] = chrNte[k][1] + String(octDum-1)
+                crNt[cnt][2] = chrNte[k][2] + String(octDum-1)
                 trNcnt[k] = 0
                 for j in 0..<3 {
-      //             print ("Starting j loop", j)
                    if tranNt[k][j] != 999 { // Not equal
                         trNcnt[k] += 1
                         var iflg = 0
@@ -1011,9 +982,9 @@ struct CamGen31bView: View {
                                 let tNtDum = iii
                                 cnt += 1
                                 melNte[cnt] = dNotes[tNtDum] + String(octDum)
-                                crNt[cnt][0] = chrNte[k][0] + String(octDum)
-                                crNt[cnt][1] = chrNte[k][1] + String(octDum)
-                                crNt[cnt][2] = chrNte[k][2] + String(octDum)
+                                crNt[cnt][0] = chrNte[k][0] + String(octDum-1)
+                                crNt[cnt][1] = chrNte[k][1] + String(octDum-1)
+                                crNt[cnt][2] = chrNte[k][2] + String(octDum-1)
                             }else {
                                 iii += 1
                             }
@@ -1021,7 +992,6 @@ struct CamGen31bView: View {
                     }       // closes if
                 }           // closes j loop
             }                // closes k loop
-     //       print ("finished k1 loop")
             var mNcnt = cnt
             // Write Melody Note Durations
             cnt = -1
@@ -1053,19 +1023,356 @@ struct CamGen31bView: View {
                     }
                 }
             }
-   //         print ("finished k2 loop")
             mNcnt = cnt + 1
-   //         print ("mNcnt,melNte", mNcnt, melNte)
-   //         print (mDur)
+            print ("mNcnt,melNte", mNcnt, melNte)
             // Write some output:
             var output5 = "\nMelody   Duration    Chord\n"
             for j in 0..<(mNcnt) {
                 let jStr = String(j+1)  // Convert j to a string
                 output5 += "\(jStr): \(melNte[j])         \(mDur[j])         \(crNt[j][0])/\(crNt[j][1])/\(crNt[j][2])\n"
             }
-        return output5
+            let output6 = mNcnt
+            let output7 = mBtRem
+            let output8 = melNte
+            let output9 = crNt
+            let output10 = mDur
+            
+        return (output5, output6, output7, output8, output9, output10)
+        }
+    
+    //MARK
+    func getNextNote(_ h_lk_up: String) -> UInt8? {
+        let s_notes = ["B5", "Bb5", "A#5", "A5", "Ab5", "G#5", "G5", "Gb5", "F#5", "F5", "E5", "Eb5", "D#5", "D5", "Db5", "C#5", "C5",
+            "B4", "Bb4", "A#4", "A4", "Ab4", "G#4","G4","Gb4","F#4","F4","E4", "Eb4", "D#4", "D4", "Db4", "C#4", "C4", "B3", "Bb3", "A#3", "A3", "Ab3", "G#3", "G3", "Gb3", "F#3", "F3", "E3", "Eb3", "D#3", "D3",
+                "Db3", "C#3", "C3"]
+        
+        let h_notes: [UInt8] = [0x53, 0x52, 0x52, 0x51, 0x50, 0x50, 0x4F, 0x4E, 0x4E, 0x4D, 0x4C, 0x4B, 0x4B, 0x4A, 0x49, 0x49,
+                                0x48, 0x47, 0x46, 0x46, 0x45, 0x44, 0x44, 0x43, 0x42, 0x42, 0x41, 0x40, 0x3F, 0x3F, 0x3E, 0x3D,
+                                0x3D, 0x3C, 0x3B, 0x3A, 0x3A, 0x39, 0x38, 0x38, 0x37, 0x36, 0x36, 0x35, 0x34, 0x33, 0x33, 0x32,
+                                0x31, 0x31, 0x30]
+
+        var h_flg = 0
+        var i = 0
+        var h_nte: UInt8? = nil
+
+        // Find the corresponding note in the list
+        while h_flg == 0 && i < s_notes.count {
+            if h_lk_up.trimmingCharacters(in: .whitespaces) == s_notes[i].trimmingCharacters(in: .whitespaces) {
+                h_flg = 1
+                h_nte = h_notes[i]
+            }
+            i += 1
+        }
+    //    print("Converted \(h_lk_up) to \(String(describing: h_nte))")
+        return h_nte
+     }
+
+    //MARK: Parse/Invert
+    func parsInvert(_ oldNote: String, _ flg: Int) -> String {
+        var CNote: [String]
+        if flg == 1 {
+            CNote = ["A4", "Bb4", "B4", "C4", "C#4", "D4", "Eb4", "E4", "F4", "F#4", "G4", "G#4"]
+        } else {
+            CNote = ["A3", "Bb3", "B3", "C3", "C#3", "D3", "Eb3", "E3", "F3", "F#3", "G3", "G#3"]
+        }
+        var fFlg = 0
+        var i = 0
+        var nRnk = -1
+        // Find the rank of the old note
+        while fFlg == 0 && i < CNote.count {
+            if oldNote == CNote[i] {
+                fFlg = 1
+                nRnk = i
+            } else {
+                i += 1
+            }
+        }
+        // Invert old note to get new note
+        var newRnk = 12 - nRnk
+        if newRnk == 12 {
+            newRnk = 0
+        }
+        let newNote = CNote[newRnk]
+        return newNote
+    }
+    
+
+    //MARK: convert new notes to proper hex format
+    func convertToHex(note: String, loc: String) -> UInt8  {
+    //    print ("Starting convertToHex: note = ", note)
+        var noteValue: UInt8?
+        var hNote = String()
+          if let hexValue = getNextNote(note) {
+              hNote = String(format: "0x%02X", hexValue)
+              if let value = UInt8(hNote.dropFirst(2), radix: 16) {
+                  noteValue = value
+              } else {
+                  hNote = "hNote Unknown" // or handle the case where the note is not found
+                  print ("hNote Unknown", loc)
+              }
+          } else {
+              print ("Prob getting hexValue", loc)
+          }
+          return noteValue!
+      }
+    
+/*    func convertToHex(note: String) -> UInt8  {
+        print ("Starting convertToHex: note = ", note)
+        var hNote = String()
+        if let hexValue = getNextNote(note) {
+            hNote = String(format: "0x%02X", hexValue)
+        } else {
+          hNote = "Unknown" // or handle the case where the note is not found
+        }
+        var noteValue: UInt8?
+        if let value = UInt8(hNote.dropFirst(2), radix: 16) {
+            noteValue = value
+        } else {
+            // Handle the error case appropriately
+        }
+        return noteValue!
+    }
+   */
+    //MARK: Melody Midi
+    func MelodyMidi4(mNcnt: Int, mBtRem: Int, ChrNte: [[String]], MelNte: [String], mDur: [String]) {
+        // Dimension section
+        print ("Starting Melody Midi")
+        print ("Melody Notes: ", MelNte)
+        let fName = "/Users/daviddippold/Library/Containers/DGD.CamGen-3-1b/Data/Documents/MelodyMidi_out.mid"
+        let fileURL = URL(fileURLWithPath: fName)
+        var fType = -1
+        var mLData = [String](repeating: "", count: 100)
+        var mIns = 1  // 1: piano; 2: guitar; 3: strings
+       // var mNote = ""
+        var mNote: String
+        var nChar = -1
+        var NoteOn = ""
+        let nOn = 0x9
+        var RstFLg = -1
+        var spd = 1  // default: 128 beats per minute
+        var Title = ""
+        var Vol = ""
+        
+        // Read in the exp melody data from Debug sheet
+        let numTracks = 2  // 1: melody only; 2: melody plus chords
+        fType = 1
+        let NChord = 8
+        var chordNote = [[String]](repeating: [String](repeating: "", count: 3), count: 15)
+        var crNt = [[String]](repeating: [String](repeating: "", count: 3), count: 20)
+        for i in 0..<NChord {
+            for j in 0..<3 {
+                chordNote[i][j] = ChrNte[i][j]
+            }
+        }
+        
+        // Midi dimension section
+        print ("Midi Dimension Section")
+        let ticksPerBeat = 0x80
+        let midiHeader: [UInt8] = [0x4D, 0x54, 0x68, 0x64, 0x0, 0x0, 0x0, 0x6]
+        let SubFormatType: [UInt8] = [0x0, 0x1]  // Type-1 MIDI file (as opposed to Type-0)
+        let Speed: [UInt8] = [0x0, 0x80]  // Default to 128 ticks per beat
+        let TrackHeader: [UInt8] = [0x4D, 0x54, 0x72, 0x6B]
+        let TemMM: [UInt8] = [0x0, 0xFF, 0x51, 0x3]  // Tempo message header
+        let Temtt: [UInt8] = [0x5, 0x68, 0xD8]  // Tempo
+        let footer: [UInt8] = [0xFF, 0x2F, 0x0]
+        var mInstr: [UInt8] = [0x0, 0xC0, 0x1, 0x0]
+        let cInstr: [UInt8] = [0x0, 0xC1, 0x2, 0x0]
+        let CTrkHeader: [UInt8] = [0x0, 0xFF, 0x3, 0x6, 0x43, 0x68, 0x6F, 0x72, 0x64, 0x73]
+        let MTrkHeader: [UInt8] = [0x0, 0xFF, 0x3, 0x6, 0x4D, 0x65, 0x6C, 0x6F, 0x64, 0x79]
+        let trkSubHeader: [UInt8] = [0x0, 0xFF, 0x3, 0x6, 0x53, 0x63, 0x61, 0x6C, 0x65, 0x73]
+        var fmNote: [UInt8] = []
+        var cNote = [String](repeating: "", count: 3)
+        var LcNote = [String](repeating: "", count: 3)
+        var LmNote = ""
+        var newNote = ""
+        let MTrk = 1
+        mIns = 1
+        let MInst = 1
+        let Lp = 2
+        let NtCntM = mNcnt
+        let mBRem: UInt32 = UInt32(4 * mBtRem + 25 + 7)  // MBtr*num loops + 25 ovhd + 7 is for last mel note
+        var CbRem: UInt32 = UInt32(4 * (NChord * 19) + 18 + 19)  // Lp=#loops
+        
+        // Write Header and subformat type
+        print ("Writing to file: \(fName)")
+        if FileManager.default.fileExists(atPath: fName){
+            print ("File Exists: \(fName)")
+        }
+       
+        if let fileHandle = FileHandle(forWritingAtPath: fName) {
+            fileHandle.write(Data(midiHeader))
+            fileHandle.write(Data(SubFormatType))
+            let numTracks = 2
+            let byteTracks: [UInt8] = [UInt8((numTracks >> 8) & 0xFF), UInt8(numTracks & 0xFF)]
+            fileHandle.write(Data(byteTracks))
+            fileHandle.write(Data(Speed))
+            
+            // Begin track loop
+            print ("Begin Track loop")
+            for k in 0..<2 {
+                if k == 0 {
+                    fileHandle.write(Data(TrackHeader))
+                    var mBRemBytes = withUnsafeBytes(of: mBRem.bigEndian, Array.init)
+                    fileHandle.write(Data(mBRemBytes))
+                    fileHandle.write(Data(TemMM))
+                    fileHandle.write(Data(Temtt))
+                    
+                    // write 1st track header & instrument
+                    fileHandle.write(Data(MTrkHeader))
+                    if mIns == 2 {
+                        mInstr[2] = 0x20
+                    } else if mIns == 3 {
+                        mInstr[2] = 0x27
+                    }
+                    fileHandle.write(Data(mInstr))
+                    
+                    print ("  // Add melody notes")
+  
+              //   First melody note
+                    var noteValue: UInt8?
+                    noteValue = convertToHex(note: MelNte[0], loc: "fM_ktrk0")
+                    if mDur[0] == "E" {
+                        fmNote = [0x90, noteValue!, 0x70, 0x40, noteValue!, 0x0, 0x0]
+                    } else if mDur[0] == "Q" {
+                        fmNote = [0x90, noteValue!, 0x70, 0x81, 0x0, noteValue!, 0x0, 0x0]
+                    } else if mDur[0] == "Q+E" {
+                        fmNote = [0x90, noteValue!, 0x70, 0x81, 0x40, noteValue!, 0x0, 0x0]
+                    } else if mDur[0] == "H" {
+                        fmNote = [0x90, noteValue!, 0x70, 0x82, 0x0, noteValue!, 0x0, 0x0]
+                    } else if mDur[0] == "W" {
+                        fmNote = [0x90, noteValue!, 0x70, 0x84, 0x0, noteValue!, 0x0, 0x0]
+                    }
+                    fileHandle.write(Data(fmNote))
+                    print ("First mNote complete")
+                    var LmNote: UInt8?
+                    LmNote = noteValue!    //mNote This sets last mnote to first note
+
+
+                    print ("Begin melody sLoop")
+                    for sLoop in 0..<4 {
+                        RstFLg = 2
+                        let begJloop = sLoop == 0 ? 1 : 0
+                        let endJloop = NtCntM
+                        let incVal = 1
+                        print ("Begin melody j loop", NtCntM, begJloop, endJloop)
+                        for j in stride(from: begJloop, to: endJloop, by: incVal) {
+                            if sLoop == 2 {
+                                newNote = parsInvert(MelNte[j], 1)
+                                noteValue = convertToHex(note: newNote, loc: "M_s2_kk_j")
+                            } else {
+                                noteValue = convertToHex(note: MelNte[j], loc: "M_s_kk_j")
+                            }
+                            let rn = Double.random(in: 0..<1)
+                            if mDur[j] == "W" {
+                                Vol = "70"
+                            } else {
+                                if rn > 0.1 || RstFLg > 0 {
+                                    Vol = "70"
+                                    RstFLg -= 1
+                                } else {
+                                    Vol = "0"
+                                    RstFLg = 2
+                                }
+                            }
+                            
+                            var nMNote: [UInt8]
+                            if mDur[j] == "E" {
+                                nMNote = [noteValue!, UInt8(Vol)!, 0x40, noteValue!, 0x0, 0x0]
+                            } else if mDur[j] == "Q" {
+                                nMNote = [noteValue!, UInt8(Vol)!, 0x81, 0x0, noteValue!, 0x0, 0x0]
+                            } else if mDur[j] == "Q+E" {
+                                nMNote = [noteValue!, UInt8(Vol)!, 0x81, 0x40, noteValue!, 0x0, 0x0]
+                            } else if mDur[j] == "H" {
+                                nMNote = [noteValue!, UInt8(Vol)!, 0x82, 0x0, noteValue!, 0x0, 0x0]
+                            } else if mDur[j] == "W" {
+                                nMNote = [noteValue!, UInt8(Vol)!, 0x84, 0x0, noteValue!, 0x0, 0x0]
+                            } else {
+                                nMNote = []
+                            }
+                            fileHandle.write(Data(nMNote))
+                        }
+                    }
+                    print ("Begin LstMNote")
+                    let LstMNote: [UInt8] = [LmNote!, 0x70, 0x84, 0x0, LmNote!, 0x0, 0x0]
+                    fileHandle.write(Data(LstMNote))
+                    fileHandle.write(Data(footer))
+                }
+                print ("Begin chord write")
+                
+                if k == 1 {
+                    var cNV0: UInt8?
+                    var cNV1: UInt8?
+                    var cNV2: UInt8?
+
+                    fileHandle.write(Data(TrackHeader))
+                   // CbRem = 4 * (NChord * 19) + 18 + 19
+                    let CbRemBytes = withUnsafeBytes(of: CbRem.bigEndian, Array.init)
+                    fileHandle.write(Data(CbRemBytes))
+                    fileHandle.write(Data(CTrkHeader))
+                    fileHandle.write(Data(cInstr))
+                    print ("chordNote[0][0]: ",chordNote[0][0])
+                    for j in 0..<3 {
+                        if j == 0 {
+                            cNV0 = convertToHex(note: chordNote[0][j], loc: "fC_j0")
+                        } else if j == 1 {
+                            cNV1 = convertToHex(note: chordNote[0][j], loc: "fC_j1")
+                        } else {
+                            cNV2 = convertToHex(note: chordNote[0][j], loc: "fC_j2")
+                        }
+                    }
+                    let fCNote: [UInt8] = [0x91, cNV0!, 0x60, 0x0, cNV1!, 0x60, 0x0, cNV2!, 0x60, 0x84, 0x0, cNV0!, 0x0, 0x0, cNV1!, 0x0, 0x0, cNV2!, 0x0, 0x0]
+                    fileHandle.write(Data(fCNote))
+                    
+                    var LcNote0: UInt8?
+                    var LcNote1: UInt8?
+                    var LcNote2: UInt8?
+                    var nValue: UInt8?
+                    var cNote0: UInt8?
+                    var cNote1: UInt8?
+                    var cNote2: UInt8?
+                    LcNote0 = cNV0
+                    LcNote1 = cNV1
+                    LcNote2 = cNV2
+                    print ("Begin chord sLoop")
+                    for sLoop in 0..<4 {
+                        let begKKloop = sLoop == 0 ? 1 : 0
+                        let endKKloop = NChord
+                        let incVal = 1
+                        print ("Begin chord kk loop", NChord)
+                        for kk in stride(from: begKKloop, to: endKKloop, by: incVal) {
+                            print ("Begin chord j loop")
+                            for j in 0..<3 {
+                               if sLoop == 2 {
+                                    newNote = parsInvert(chordNote[kk][j], 2)
+                                    nValue = convertToHex(note: newNote, loc: "C_s2_kk_j")
+                                } else {
+                                    nValue = convertToHex(note: chordNote[kk][j],loc: "C_s_kk_j")
+                                }
+                                if j == 0 {
+                                    cNote0 = nValue
+                                } else if j == 1 {
+                                    cNote1 = nValue
+                                } else if j == 2 {
+                                    cNote2 = nValue
+                                }
+                            }
+                            let nCNote: [UInt8] = [cNote0!, 0x60, 0x0, cNote1!, 0x60, 0x0, cNote2!, 0x60, 0x84, 0x0, cNote0!, 0x0, 0x0, cNote1!, 0x0, 0x0, cNote2!, 0x0, 0x0]
+                            fileHandle.write(Data(nCNote))
+                        }
+                    }
+                    print ("Form last chord note")
+                   let LstcNote: [UInt8] = [LcNote0!, 0x60, 0x0, LcNote1!, 0x60, 0x0, LcNote2!, 0x60, 0x84, 0x0, LcNote0!, 0x0, 0x0, LcNote1!, 0x0, 0x0, LcNote2!, 0x0, 0x0]
+                    fileHandle.write(Data(LstcNote))
+                    fileHandle.write(Data(footer))
+                    print ("Data write complete")
+                }
+           }
+        } else {
+            print("Failed to open file for writing.")
         }
     }
+}
+
 
 // MARK:  End of main functions
 
